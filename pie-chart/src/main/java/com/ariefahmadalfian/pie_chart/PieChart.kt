@@ -1,10 +1,20 @@
 package com.ariefahmadalfian.pie_chart
 
 import android.graphics.Paint
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,13 +24,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -34,20 +48,17 @@ import com.ariefahmadalfian.pie_chart.utils.formatNumber
 @Composable
 fun PieChart(
     modifier: Modifier,
-    isLoading : Boolean,
-    isEmpty : Boolean,
-    input: List<PieChartData>? = null,
+    isLoading: Boolean,
+    isEmpty: Boolean,
+    inputs: List<PieChartData>? = null,
     colorBackground: Color = Color.White,
     titleCenterColor: Color = Color.Black,
     centerText: String = "",
-    fontFamily: FontFamily = FontFamily.Default
+    fontFamily: FontFamily = FontFamily.Default,
+    onReload: () -> Unit
 ) {
     var circleCenter by remember {
         mutableStateOf(Offset.Zero)
-    }
-
-    val inputList by remember {
-        mutableStateOf(input)
     }
 
     var parentInnerRadius by remember {
@@ -57,6 +68,30 @@ fun PieChart(
     var values: MutableList<PieChartValue> = remember {
         mutableStateListOf()
     }
+
+    val shimmerColors = listOf(
+        Color.LightGray.copy(alpha = 0.6f),
+        Color.LightGray.copy(alpha = 0.2f),
+        Color.LightGray.copy(alpha = 0.6f),
+    )
+
+    val transition = rememberInfiniteTransition(label = "")
+    val translateAnim = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1000,
+                easing = FastOutLinearInEasing
+            )
+        ), label = ""
+    )
+
+    val brush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset.Zero,
+        end = Offset(x = translateAnim.value, y = translateAnim.value)
+    )
 
     Box(contentAlignment = Alignment.Center) {
         Canvas(modifier = modifier) {
@@ -69,10 +104,24 @@ fun PieChart(
 
             circleCenter = Offset(x = width / 2f, y = height / 2f)
 
-            when{
+            when {
                 isLoading -> {
-
+                    drawArc(
+                        brush = brush,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = true,
+                        size = Size(
+                            width = radius * 2f,
+                            height = radius * 2f
+                        ),
+                        topLeft = Offset(
+                            (width - radius * 2f) / 2f,
+                            (height - radius * 2f) / 2f
+                        )
+                    )
                 }
+
                 isEmpty -> {
                     drawArc(
                         color = Color.LightGray,
@@ -89,15 +138,16 @@ fun PieChart(
                         )
                     )
                 }
-                !input.isNullOrEmpty() -> {
-                    val totalValue = input.sumOf {
+
+                !inputs.isNullOrEmpty() -> {
+                    val totalValue = inputs.sumOf {
                         it.value
                     }
                     val anglePerValue = 360f / totalValue
                     var currentStartAngle = 0.0
 
-                    inputList?.forEachIndexed { index, pieChartInput ->
-                        val scale =  1.0f
+                    inputs.forEachIndexed { index, pieChartInput ->
+                        val scale = 1.0f
                         val angleToDraw = pieChartInput.value * anglePerValue
                         scale(scale) {
                             drawArc(
@@ -177,18 +227,51 @@ fun PieChart(
                 color = colorBackground.copy(0.25f),
                 radius = innerRadius + transparentWidth / 2f
             )
-
         }
-        Text(
-            text = centerText,
-            modifier = Modifier
-                .width(Dp(parentInnerRadius / 1.5f))
-                .padding(25.dp),
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center,
-            fontFamily = fontFamily,
-            color = titleCenterColor
-        )
+
+        when {
+            isEmpty -> {
+                Column(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable {
+                            onReload()
+                        }
+                        .padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(id = R.drawable.reload),
+                        contentDescription = "Error",
+                        tint = titleCenterColor,
+                        modifier = Modifier
+                            .size(24.dp)
+                    )
+                    Text(
+                        text = "Reload",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        fontFamily = fontFamily,
+                        color = titleCenterColor
+                    )
+                }
+
+            }
+
+            !inputs.isNullOrEmpty() -> {
+                Text(
+                    text = centerText,
+                    modifier = Modifier
+                        .width(Dp(parentInnerRadius / 1.5f))
+                        .padding(12.dp),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    fontFamily = fontFamily,
+                    color = titleCenterColor
+                )
+            }
+        }
     }
 }
