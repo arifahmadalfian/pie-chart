@@ -38,81 +38,70 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PieChartScreenScreen() {
-    var isLoading by remember {
-        mutableStateOf(true)
-    }
+    var isLoading1 by remember { mutableStateOf(true) }
+    var isLoading2 by remember { mutableStateOf(true) }
+    var isLoading3 by remember { mutableStateOf(true) }
 
-    var isEmpty by remember {
-        mutableStateOf(false)
-    }
+    var isEmpty1 by remember { mutableStateOf(false) }
+    var isEmpty2 by remember { mutableStateOf(false) }
+    var isEmpty3 by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
-    val datas1 = remember {
-        mutableStateListOf(
-            PieChartData(
-                color = Color.Blue,
-                value = 29.0,
-                description = "Blue"
-            ),
-            PieChartData(
-                color = Color.DarkGray,
-                value = 21.0,
-                description = "DarkGray"
-            ),
-            PieChartData(
-                color = Color.Red,
-                value = 32.0,
-                description = "Red"
-            ),
-            PieChartData(
-                color = Color.Magenta,
-                value = 12.0,
-                description = "Magenta"
-            ),
-            PieChartData(
-                color = Color.Cyan,
-                value = 38.0,
-                description = "Cyan"
-            ),
+    val datas by remember {
+        mutableStateOf(
+            mutableListOf(
+                PieChartData(
+                    color = Color.Blue,
+                    value = 29.0,
+                    description = "Blue"
+                ),
+                PieChartData(
+                    color = Color.DarkGray,
+                    value = 21.0,
+                    description = "DarkGray"
+                ),
+                PieChartData(
+                    color = Color.Red,
+                    value = 32.0,
+                    description = "Red"
+                ),
+                PieChartData(
+                    color = Color.Magenta,
+                    value = 12.0,
+                    description = "Magenta"
+                ),
+                PieChartData(
+                    color = Color.Cyan,
+                    value = 38.0,
+                    description = "Cyan"
+                ),
+            )
         )
     }
 
-    var datas2: SnapshotStateList<PieChartData>? = remember {
-        mutableStateListOf(
-            PieChartData(
-                color = Color.Blue,
-                value = 29.0,
-                description = "Blue"
-            ),
-            PieChartData(
-                color = Color.DarkGray,
-                value = 21.0,
-                description = "DarkGray"
-            ),
-            PieChartData(
-                color = Color.Red,
-                value = 32.0,
-                description = "Red"
-            ),
-            PieChartData(
-                color = Color.Magenta,
-                value = 12.0,
-                description = "Magenta"
-            ),
-            PieChartData(
-                color = Color.Cyan,
-                value = 38.0,
-                description = "Cyan"
-            ),
-        )
+    var datas1: MutableList<PieChartData>? by remember {
+        mutableStateOf(null)
+    }
+
+    var datas2: MutableList<PieChartData>? by remember {
+        mutableStateOf(null)
+    }
+
+    var datas3: MutableList<PieChartData>? by remember {
+        mutableStateOf(null)
     }
 
     LaunchedEffect(key1 = Unit) {
         delay(3000)
-        isLoading = false
-        isEmpty = true
-        datas2 = null
+        datas1 = datas
+
+        isLoading1 = false
+        isLoading2 = false
+        isLoading3 = false
+        isEmpty1 = false
+        isEmpty2 = true
+        isEmpty3 = true
     }
 
     Column(
@@ -124,8 +113,8 @@ fun PieChartScreenScreen() {
         PieChart(
             modifier = Modifier
                 .size(250.dp),
-            isLoading = isLoading,
-            isEmpty = false,
+            isLoading = isLoading1,
+            isEmpty = isEmpty1,
             inputs = datas1,
             centerText = "Title Center",
             onReload = {
@@ -138,17 +127,17 @@ fun PieChartScreenScreen() {
         PieChart(
             modifier = Modifier
                 .size(250.dp),
-            isLoading = false,
-            isEmpty = isEmpty,
+            isLoading = isLoading2,
+            isEmpty = isEmpty2,
             inputs = datas2,
-            centerText = "Title Center" ,
+            centerText = "Value 10.000.000" ,
             onReload = {
-                isLoading = true
-                isEmpty = false
+                isLoading2 = true
+                isEmpty2 = false
                 scope.launch {
                     delay(3000)
-                    isLoading = false
-                    datas2 = datas1
+                    isLoading2 = false
+                    datas2 = datas
                 }
             }
         )
@@ -158,13 +147,18 @@ fun PieChartScreenScreen() {
         PieChart(
             modifier = Modifier
                 .size(250.dp),
-            isLoading = isLoading,
-            isEmpty = isEmpty,
-            inputs = datas2,
+            isLoading = isLoading3,
+            isEmpty = isEmpty3,
+            inputs = datas3,
             centerText = "Title Center",
             onReload = {
-                isLoading = true
-                isEmpty = false
+                isLoading3 = true
+                isEmpty3 = false
+                scope.launch {
+                    delay(3000)
+                    isLoading3 = false
+                    isEmpty3 = true
+                }
             }
         )
     }

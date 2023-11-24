@@ -1,5 +1,6 @@
 package com.ariefahmadalfian.pie_chart
 
+import android.annotation.SuppressLint
 import android.graphics.Paint
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.animateFloat
@@ -17,8 +18,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,6 +46,7 @@ import com.ariefahmadalfian.pie_chart.model.PieChartData
 import com.ariefahmadalfian.pie_chart.model.PieChartValue
 import com.ariefahmadalfian.pie_chart.utils.formatNumber
 
+@SuppressLint("MutableCollectionMutableState")
 @Composable
 fun PieChart(
     modifier: Modifier,
@@ -53,10 +55,18 @@ fun PieChart(
     inputs: List<PieChartData>? = null,
     colorBackground: Color = Color.White,
     titleCenterColor: Color = Color.Black,
-    centerText: String = "",
+    centerText: String,
     fontFamily: FontFamily = FontFamily.Default,
     onReload: () -> Unit
 ) {
+    var list: List<PieChartData>? by remember {
+        mutableStateOf(null)
+    }
+
+    LaunchedEffect(key1 = inputs) {
+        list = inputs
+    }
+
     var circleCenter by remember {
         mutableStateOf(Offset.Zero)
     }
@@ -65,15 +75,19 @@ fun PieChart(
         mutableStateOf(0f)
     }
 
-    var values: MutableList<PieChartValue> = remember {
-        mutableStateListOf()
+    var values: MutableList<PieChartValue> by remember {
+        mutableStateOf(mutableListOf())
     }
 
-    val shimmerColors = listOf(
-        Color.LightGray.copy(alpha = 0.6f),
-        Color.LightGray.copy(alpha = 0.2f),
-        Color.LightGray.copy(alpha = 0.6f),
-    )
+    val shimmerColors by remember {
+        mutableStateOf(
+            listOf(
+                Color.LightGray.copy(alpha = 0.6f),
+                Color.LightGray.copy(alpha = 0.2f),
+                Color.LightGray.copy(alpha = 0.6f),
+            )
+        )
+    }
 
     val transition = rememberInfiniteTransition(label = "")
     val translateAnim = transition.animateFloat(
@@ -85,12 +99,6 @@ fun PieChart(
                 easing = FastOutLinearInEasing
             )
         ), label = ""
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset.Zero,
-        end = Offset(x = translateAnim.value, y = translateAnim.value)
     )
 
     Box(contentAlignment = Alignment.Center) {
@@ -106,6 +114,13 @@ fun PieChart(
 
             when {
                 isLoading -> {
+                    values.clear()
+                    val brush = Brush.linearGradient(
+                        colors = shimmerColors,
+                        start = Offset.Zero,
+                        end = Offset(x = translateAnim.value, y = translateAnim.value)
+                    )
+
                     drawArc(
                         brush = brush,
                         startAngle = 0f,
@@ -123,6 +138,7 @@ fun PieChart(
                 }
 
                 isEmpty -> {
+                    values.clear()
                     drawArc(
                         color = Color.LightGray,
                         startAngle = 0f,
@@ -139,14 +155,15 @@ fun PieChart(
                     )
                 }
 
-                !inputs.isNullOrEmpty() -> {
-                    val totalValue = inputs.sumOf {
+                !list.isNullOrEmpty() -> {
+                    val totalValue = list?.sumOf {
                         it.value
-                    }
+                    } ?: 1.0
+
                     val anglePerValue = 360f / totalValue
                     var currentStartAngle = 0.0
 
-                    inputs.forEachIndexed { index, pieChartInput ->
+                    list?.forEachIndexed { index, pieChartInput ->
                         val scale = 1.0f
                         val angleToDraw = pieChartInput.value * anglePerValue
                         scale(scale) {
@@ -187,7 +204,6 @@ fun PieChart(
                                 rotate = rotateAngle.toFloat()
                             )
                         )
-
                     }
                 }
             }
@@ -195,7 +211,7 @@ fun PieChart(
             values.forEach {
                 drawContext.canvas.nativeCanvas.apply {
                     rotate(it.rotate) {
-                        if (it.text != "0.0 %") {
+                        if (it.text != "0.0 %" && it.text != "0,0 %") {
                             drawText(
                                 it.text,
                                 it.x,
@@ -235,6 +251,7 @@ fun PieChart(
                     modifier = Modifier
                         .clip(CircleShape)
                         .clickable {
+                            values = mutableListOf()
                             onReload()
                         }
                         .padding(12.dp),
@@ -259,7 +276,7 @@ fun PieChart(
 
             }
 
-            !inputs.isNullOrEmpty() -> {
+            !list.isNullOrEmpty() -> {
                 Text(
                     text = centerText,
                     modifier = Modifier
